@@ -1,0 +1,37 @@
+{
+    "editor.fontFamily": "'Victor Mono', monospace",
+    "editor.fontSize": 14,
+    "editor.fontLigatures": true,
+    
+    "editor.tokenColorCustomizations": {
+        "textMateRules": [
+            {
+                "name": "Italicize names (variables, functions, parameters)",
+                "scope": [
+                    "variable",
+                    "variable.language",
+                    "variable.parameter",
+                    "meta.definition.variable",
+                    "entity.name.function",
+                    "variable.other.property"
+                ],
+                "settings": {
+                    "fontStyle": "italic"
+                }
+            },
+            {
+                "name": "Force types, classes, and primitives to be normal",
+                "scope": [
+                    "entity.name.type",
+                    "storage.type",
+                    "support.type",
+                    "entity.name.class",
+                    "entity.name.type.class"
+                ],
+                "settings": {
+                    "fontStyle": ""
+                }
+            }
+        ]
+    }
+}

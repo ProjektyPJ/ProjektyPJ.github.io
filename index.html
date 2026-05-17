@@ -5,12 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Aero Glass Nav</title>
 <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-<p class="demo-label">Aero Glass — Navigation Bar</p>
-
-<!-- Nav 1: Standard horizontal nav -->
 <nav class="aero" role="navigation" aria-label="Main navigation">
   <a class="aero-logo" href="#">
     <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -76,55 +74,179 @@
   </div>
 </nav>
 
-<p class="demo-label">Aero Glass — Window Tab Bar</p>
+<div class="scene">
 
-<!-- Nav 2: Window-style tab bar -->
-<nav class="aero-dark" role="navigation" aria-label="Window tabs">
-  <div class="tab active">
-    <svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-      <path d="M2 5.5l4.5-3.5 4.5 3.5v5.5H8V8H5v3H2V5.5z"/>
-    </svg>
-    Desktop
+  <div class="header-bar">
+    <div class="logo-glass">
+      <div class="logo-dot"></div>
+      <span class="logo-text">Timeline</span>
+    </div>
+    <div class="now-badge">
+      <div class="now-pulse"></div>
+      <span id="clock-display">--:--</span>
+    </div>
   </div>
 
-  <div class="tab">
-    <svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-      <path d="M2 3h9v7H2z"/><path d="M5 10v1.5M8 10v1.5M4 11.5h5"/>
-    </svg>
-    Documents
+  <div class="timeline-wrapper">
+    <div class="fade-left"></div>
+    <div class="fade-right"></div>
+    <div class="timeline-scroll" id="ts">
+      <div class="timeline-inner" id="ti">
+        <div class="day-labels" id="day-labels"></div>
+        <div class="hours-row" id="hours-row"></div>
+        <div class="cards-area" id="cards-area"></div>
+      </div>
+    </div>
   </div>
 
-  <div class="sep" aria-hidden="true"></div>
-
-  <div class="tab">
-    <svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-      <circle cx="6.5" cy="6.5" r="4.5"/>
-      <path d="M6.5 4v2.5l1.5 1"/>
-    </svg>
-    Recent
+  <div class="scroll-hint">
+    <span>◂ przyszłość</span>
+    ···
+    <span>przeszłość ▸</span>
   </div>
 
-  <div class="tab">
-    <svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-      <path d="M6.5 2L8 5.2l3.5.5-2.5 2.4.6 3.4L6.5 10 3.4 11.5l.6-3.4L1.5 5.7l3.5-.5z"/>
-    </svg>
-    Favorites
-  </div>
+</div>
 
-  <div class="tab">
-    <svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-      <circle cx="6.5" cy="4.5" r="2.5"/>
-      <path d="M2 11.5c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4"/>
-    </svg>
-    Network
-  </div>
+<script>
+  const HOUR_W = 120;
+const HOURS_BEFORE = 48;
+const HOURS_AFTER  = 48;
 
-  <div class="win-buttons" aria-label="Window controls">
-    <div class="win-btn" title="Minimize">─</div>
-    <div class="win-btn" title="Restore">▭</div>
-    <div class="win-btn close" title="Close">✕</div>
-  </div>
-</nav>
+const DAYS_PL = ['Niedziela','Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota'];
+const MONTHS_PL = ['sty','lut','mar','kwi','maj','cze','lip','sie','wrz','paź','lis','gru'];
+
+const EVENTS_TEMPLATES = [
+  { cat:'meet',  titles:['Stand-up','Spotkanie','Review','Demo','Sync','Retro','Planning'] },
+  { cat:'task',  titles:['Deployment','Code review','Testy','Raport','Merge PR','Backup'] },
+  { cat:'alert', titles:['Deadline','Monitoring','Alert SLA','Przypomnienie'] },
+  { cat:'note',  titles:['Notatka','Pomysł','Research','Dokumentacja'] },
+];
+
+const subs = ['Sala A','Zoom','Teams','Slack','Zdalnie','Biuro','ul. Świdnicka 12','Wrocław'];
+
+function seededRand(seed) {
+  let s = seed;
+  return function() {
+    s = (s * 1664525 + 1013904223) & 0xffffffff;
+    return (s >>> 0) / 0xffffffff;
+  };
+}
+
+function getEvents(hourIndex) {
+  const r = seededRand(hourIndex * 2654435761);
+  const count = r() < 0.35 ? 0 : r() < 0.6 ? 1 : 2;
+  const evs = [];
+  for (let i = 0; i < count; i++) {
+    const t = EVENTS_TEMPLATES[Math.floor(r() * EVENTS_TEMPLATES.length)];
+    const title = t.titles[Math.floor(r() * t.titles.length)];
+    const sub = subs[Math.floor(r() * subs.length)];
+    evs.push({ cat: t.cat, title, sub });
+  }
+  return evs;
+}
+
+const now = new Date();
+const nowH = now.getFullYear() * 100000 + now.getMonth() * 10000 + now.getDate() * 100 + now.getHours();
+
+function buildTimeline() {
+  const dayLabels = document.getElementById('day-labels');
+  const hoursRow  = document.getElementById('hours-row');
+  const cardsArea = document.getElementById('cards-area');
+
+  const startDate = new Date(now);
+  startDate.setHours(startDate.getHours() - HOURS_BEFORE, 0, 0, 0);
+
+  const totalHours = HOURS_BEFORE + 1 + HOURS_AFTER;
+  let lastDay = -1;
+
+  for (let i = 0; i < totalHours; i++) {
+    const d = new Date(startDate);
+    d.setHours(d.getHours() + i);
+
+    const hKey = d.getFullYear() * 100000 + d.getMonth() * 10000 + d.getDate() * 100 + d.getHours();
+    const isNow = hKey === nowH;
+    const hStr = String(d.getHours()).padStart(2, '0') + ':00';
+    const dayNum = d.getDay();
+
+    const dlDiv = document.createElement('div');
+    dlDiv.className = 'day-label';
+    if (d.getDate() !== lastDay) {
+      const label = DAYS_PL[dayNum] + ', ' + d.getDate() + ' ' + MONTHS_PL[d.getMonth()];
+      dlDiv.classList.add('day-start');
+      dlDiv.setAttribute('data-day', label);
+      lastDay = d.getDate();
+    }
+    dayLabels.appendChild(dlDiv);
+
+    const hCell = document.createElement('div');
+    hCell.className = 'hour-cell' + (isNow ? ' is-now' : '');
+    const hLabel = document.createElement('span');
+    hLabel.className = 'hour-label';
+    hLabel.textContent = isNow ? '▶ ' + hStr : hStr;
+    hCell.appendChild(hLabel);
+    hoursRow.appendChild(hCell);
+
+    const col = document.createElement('div');
+    col.className = 'hour-col' + (isNow ? ' is-now' : '');
+    const evs = getEvents(hKey);
+    evs.forEach(ev => {
+      const card = document.createElement('div');
+      card.className = 'event-card cat-' + ev.cat;
+      card.innerHTML = `<div class="card-title"><span class="card-dot"></span>${ev.title}</div><div class="card-sub">${ev.sub}</div>`;
+      col.appendChild(card);
+    });
+    cardsArea.appendChild(col);
+  }
+}
+
+function scrollToNow() {
+  const ts = document.getElementById('ts');
+  const nowIndex = HOURS_BEFORE;
+  const target = nowIndex * HOUR_W - ts.clientWidth / 2 + HOUR_W / 2 + 48;
+  ts.scrollLeft = Math.max(0, target);
+}
+
+function updateClock() {
+  const n = new Date();
+  const t = String(n.getHours()).padStart(2,'0') + ':' + String(n.getMinutes()).padStart(2,'0') + ':' + String(n.getSeconds()).padStart(2,'0');
+  document.getElementById('clock-display').textContent = t;
+}
+
+buildTimeline();
+scrollToNow();
+updateClock();
+setInterval(updateClock, 1000);
+
+const ts = document.getElementById('ts');
+let isDragging = false, startX = 0, scrollStart = 0;
+
+ts.addEventListener('mousedown', e => {
+  isDragging = true;
+  startX = e.clientX;
+  scrollStart = ts.scrollLeft;
+  ts.classList.add('grabbing');
+});
+
+document.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  ts.scrollLeft = scrollStart - (e.clientX - startX);
+});
+
+document.addEventListener('mouseup', () => {
+  isDragging = false;
+  ts.classList.remove('grabbing');
+});
+
+ts.addEventListener('touchstart', e => {
+  startX = e.touches[0].clientX;
+  scrollStart = ts.scrollLeft;
+}, { passive: true });
+
+ts.addEventListener('touchmove', e => {
+  const dx = e.touches[0].clientX - startX;
+  ts.scrollLeft = scrollStart - dx;
+}, { passive: true });
+</script>
 
 </body>
 </html>
